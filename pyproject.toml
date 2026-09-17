@@ -10,7 +10,8 @@ requires-python = ">=3.13,<4.0.0"
 dependencies = [
     "langchain (>=1.4.1,<2.0.0)",
     "langchain-openai (>=1.6.2,<2.0.0)",
-    "langchain-pymupdf4llm (>=1.28.0,<2.0.0)"
+    "langchain-pymupdf4llm (>=1.28.0,<2.0.0)",
+    "langchain-text-splitters (>=1.1.2,<2.0.0)"
 ]
 
 [tool.poetry]
@@ -19,6 +20,9 @@ packages = [{include = "lumina_section_extractor", from = "src"}]
 [project.scripts]
 extract-raw = "lumina_section_extractor.extract_raw_markdown:main"
 extract-titles = "lumina_section_extractor.extract_titles:main"
+extract-sections = "lumina_section_extractor.extract_sections:main"
+extract-chunks = "lumina_section_extractor.extract_chunks:main"
+run-pipeline = "lumina_section_extractor.pipeline:main"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

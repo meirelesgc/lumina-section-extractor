@@ -1,30 +1,74 @@
 import argparse
-import sys
+import json
 import time
 from pathlib import Path
+from typing import Any
 import pymupdf4llm
 
 
+def extract_raw_with_pages(pdf_path: Path) -> tuple[str, list[dict[str, Any]]]:
+    """Extrai markdown bruto e lista de chunks por página do PDF via pymupdf4llm."""
+    page_chunks = pymupdf4llm.to_markdown(str(pdf_path), page_chunks=True)
+
+    page_map: list[dict[str, Any]] = []
+    text_parts: list[str] = []
+    current_line = 1
+
+    for chunk in page_chunks:
+        raw_text = chunk.get("text", "")
+        metadata = chunk.get("metadata", {})
+        page_num = metadata.get("page_number", 1)
+
+        lines = raw_text.splitlines()
+        num_lines = len(lines)
+        start_line = current_line
+        end_line = current_line + max(0, num_lines - 1)
+
+        page_map.append(
+            {
+                "page": page_num,
+                "start_line": start_line,
+                "end_line": end_line,
+                "char_count": len(raw_text),
+                "toc_items": chunk.get("toc_items", []),
+            }
+        )
+
+        text_parts.append(raw_text)
+        # 2 quebras de linha adicionam 2 linhas vazias entre páginas
+        current_line = end_line + 3
+
+    full_markdown = "\n\n".join(text_parts)
+    return full_markdown, page_map
+
+
 def extract_pdf_to_raw_markdown(pdf_path: Path, output_dir: Path) -> Path:
-    """Lê um arquivo PDF e salva a versão em Markdown cru (sem pós-tratamento)."""
+    """Lê um PDF e salva o Markdown cru (.md) e o mapeamento de páginas (.pages.json)."""
     output_dir.mkdir(parents=True, exist_ok=True)
     output_file = output_dir / f"{pdf_path.stem}.md"
+    pages_file = output_dir / f"{pdf_path.stem}_pages.json"
 
     print(f"📄 Processando: {pdf_path.name}...")
     start_time = time.time()
 
-    # Conversão direta e crua utilizando pymupdf4llm
-    raw_markdown = pymupdf4llm.to_markdown(str(pdf_path))
+    full_markdown, page_map = extract_raw_with_pages(pdf_path)
 
-    output_file.write_text(raw_markdown, encoding="utf-8")
+    output_file.write_text(full_markdown, encoding="utf-8")
+    pages_file.write_text(
+        json.dumps({"source_file": pdf_path.name, "pages": page_map}, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
     elapsed = time.time() - start_time
-
-    print(f"✅ Salvo em: {output_file} ({elapsed:.2f}s, {len(raw_markdown)} caracteres)")
+    print(
+        f"✅ Salvo em: {output_file.name} e {pages_file.name} "
+        f"({elapsed:.2f}s, {len(full_markdown)} chars, {len(page_map)} páginas)"
+    )
     return output_file
 
 
 def process_directory(input_dir: Path, output_dir: Path) -> list[Path]:
-    """Processa todos os PDFs em input_dir e salva os arquivos .md em output_dir."""
+    """Processa todos os PDFs em input_dir e salva os arquivos em output_dir."""
     if not input_dir.exists():
         print(f"⚠️ Diretório de entrada não encontrado: {input_dir}")
         return []
@@ -48,13 +92,12 @@ def process_directory(input_dir: Path, output_dir: Path) -> list[Path]:
 
 
 def main() -> None:
-    # Localiza o diretório raiz do projeto com base na localização deste arquivo
     project_root = Path(__file__).resolve().parents[2]
     default_input_dir = project_root / "data" / "00_input_pdfs"
     default_output_dir = project_root / "data" / "01_raw_markdown"
 
     parser = argparse.ArgumentParser(
-        description="Etapa 01: Extração básica de PDF para Markdown cru (sem tratamento)."
+        description="Etapa 01: Extração básica de PDF para Markdown cru com metadados por página."
     )
     parser.add_argument(
         "--input-dir",
@@ -68,7 +111,7 @@ def main() -> None:
         "-o",
         type=Path,
         default=default_output_dir,
-        help=f"Diretório onde os arquivos .md serão gravados (padrão: {default_output_dir})",
+        help=f"Diretório onde os arquivos serão gravados (padrão: {default_output_dir})",
     )
 
     args = parser.parse_args()

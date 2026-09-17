@@ -54,43 +54,60 @@ poetry run python -c "import pymupdf4llm; print('Ambiente pronto!')"
 
 ## 📂 Fluxo de Extração por Etapas
 
-Para permitir a análise comparativa e a tomada de decisões, o pipeline trabalha com pastas organizadas por fases:
+O pipeline é estruturado em **três estágios desacoplados**, utilizando uma **abordagem puramente funcional** com cleaners plugáveis e dataclasses apenas para modelagem de dados:
 
-- **`data/00_input_pdfs/`**: Coloque aqui os arquivos PDF originais para processamento.
-- **`data/01_raw_markdown/`**: Onde os resultados em Markdown cru (sem pós-tratamento) são salvos após a conversão básica.
-
-### Executando a Etapa 1: Markdown Cru
-
-Após adicionar os PDFs em `data/00_input_pdfs/`, execute:
-
-```bash
-poetry run extract-raw
+```
+PDF → [Estágio 1: Extração Bruta] → Markdown + Páginas
+    → [Estágio 2: Limpeza Funcional + Árvore de Headings] → Árvore de Seções (Breadcrumbs)
+    → [Estágio 3: Chunking Intra-seção + Limpeza de Documentos] → Chunks Enriquecidos
 ```
 
-*(Ou alternativamente: `poetry run python -m lumina_section_extractor.extract_raw_markdown`)*
+### 📁 Estrutura de Diretórios
 
-Para personalizar as pastas de entrada e saída:
-```bash
-poetry run extract-raw --input-dir data/00_input_pdfs --output-dir data/01_raw_markdown
-```
+- **`data/00_input_pdfs/`**: PDFs originais adicionados manualmente.
+- **`data/01_raw_markdown/`**: Markdowns crus (`.md`) e mapas de páginas (`_pages.json`).
+- **`data/02_sections_tree/`**: Árvores hierárquicas de seções (`_sections.json` e `_sections.md`).
+- **`data/03_chunks/`**: Chunks semânticos enriquecidos (`_chunks.json` e `_chunks.md`).
+- *(Opcional: `data/02_extracted_titles/`: Títulos brutos extraídos via `extract-titles`)*
 
 ---
 
-- **`data/02_extracted_titles/`**: Onde os títulos extraídos (linhas com `#`) são salvos em formato `.md` e `.json`.
+### 🚀 Comandos do Pipeline
 
-### Executando a Etapa 2: Extração de Títulos (`#`)
-
-Após gerar os markdowns crus da Etapa 1, execute:
+#### 1. Executar o Pipeline Completo (Recomendado)
+Executa os três estágios em sequência de ponta a ponta:
 
 ```bash
-poetry run extract-titles
+poetry run run-pipeline
 ```
 
-*(Ou alternativamente: `poetry run python -m lumina_section_extractor.extract_titles`)*
+#### 2. Executar Estágio por Estágio
 
-Você também pode especificar um arquivo `.md` pontual:
+- **Estágio 1 — Extração Bruta:**
+  ```bash
+  poetry run extract-raw
+  ```
+  *(Extrai o Markdown completo e gera o mapa de páginas com `pymupdf4llm`)*
+
+- **Estágio 2 — Limpeza de Cabeçalhos e Árvore de Seções:**
+  ```bash
+  poetry run extract-sections
+  ```
+  *(Aplica cleaners funcionais: remoção de markup, cabeçalhos/rodapés repetidos e títulos órfãos; constrói relações parent/children e breadcrumbs)*
+
+- **Estágio 3 — Chunking Intra-seção e Enriquecimento:**
+  ```bash
+  poetry run extract-chunks
+  ```
+  *(Fatia seções longas com `RecursiveCharacterTextSplitter`, injeta prefixo semântico `[Título]`, anexa metadados completos e executa cleaners de whitespace)*
+
+---
+
+### 🧪 Executando os Testes
+
 ```bash
-poetry run extract-titles --file data/01_raw_markdown/meu_arquivo.md
+poetry run python -m unittest discover tests
 ```
+
 
 
