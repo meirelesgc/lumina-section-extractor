@@ -88,6 +88,10 @@ def section_to_documents(
             "section_level": section.heading.level,
             "level_source": section.heading.level_source,
             "hierarchy_confidence": confidence,
+            "section_role": (
+                section.role.value if hasattr(section.role, "value") else str(section.role)
+            ),
+            "role_confidence": section.role_confidence,
             "chunk_index": idx,
             "total_chunks_in_section": total_sub_chunks,
             "page_number": section.heading.page,
@@ -95,6 +99,7 @@ def section_to_documents(
             "line_number": section.heading.line_number,
         }
         docs.append(Document(page_content=prefixed_content, metadata=metadata))
+
 
     return docs
 

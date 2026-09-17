@@ -118,8 +118,11 @@ def flatten_sections(sections: list[Section]) -> list[Section]:
 def section_to_dict(section: Section) -> dict[str, Any]:
     """Converte uma seção e seus filhos recursivamente em dicionário serializável."""
     confidence = "numbered" if section.heading.level_source == "numbering_pattern" else "font_derived"
+    role_val = section.role.value if hasattr(section.role, "value") else str(section.role)
     return {
         "title": section.heading.title,
+        "role": role_val,
+        "role_confidence": section.role_confidence,
         "level": section.heading.level,
         "level_source": section.heading.level_source,
         "hierarchy_confidence": confidence,
@@ -133,6 +136,7 @@ def section_to_dict(section: Section) -> dict[str, Any]:
         "parent_title": section.parent_title,
         "children": [section_to_dict(child) for child in section.children],
     }
+
 
 
 

@@ -10,7 +10,7 @@ from lumina_section_extractor.chunking import (
     run_chunk_pipeline,
     sections_to_documents,
 )
-from lumina_section_extractor.models import Heading, Section
+from lumina_section_extractor.models import Heading, Section, SectionRole
 
 
 def dict_to_section_recursive(data: dict[str, Any]) -> Section:
@@ -23,15 +23,24 @@ def dict_to_section_recursive(data: dict[str, Any]) -> Section:
         page=data.get("page"),
         level_source=data.get("level_source", "font"),
     )
+    raw_role = data.get("role", "unknown")
+    try:
+        role = SectionRole(raw_role)
+    except ValueError:
+        role = SectionRole.UNKNOWN
+
     section = Section(
         heading=heading,
         breadcrumb=data.get("breadcrumb", [data.get("title", "")]),
         content=data.get("content", ""),
         parent_title=data.get("parent_title"),
+        role=role,
+        role_confidence=data.get("role_confidence"),
     )
     for child_dict in data.get("children", []):
         section.children.append(dict_to_section_recursive(child_dict))
     return section
+
 
 
 def flatten_section_objects(sections: list[Section]) -> list[Section]:

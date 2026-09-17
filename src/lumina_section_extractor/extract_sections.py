@@ -4,6 +4,7 @@ import time
 from pathlib import Path
 from typing import Any
 from lumina_section_extractor.heading_cleaners import run_heading_pipeline
+from lumina_section_extractor.role_classifier import classify_section_roles
 from lumina_section_extractor.section_tree import (
     build_section_tree,
     flatten_sections,
@@ -11,6 +12,7 @@ from lumina_section_extractor.section_tree import (
     tree_to_dict,
     tree_to_markdown,
 )
+
 
 
 def load_page_map(pages_file: Path) -> list[dict[str, Any]] | None:
@@ -48,7 +50,11 @@ def process_markdown_to_sections(
     tree = build_section_tree(cleaned_headings, full_text)
     all_sections = flatten_sections(tree)
 
+    # 4. Classificação semântica determinística de papéis (roles)
+    classify_section_roles(all_sections)
+
     elapsed = time.time() - start_time
+
     base_name = md_path.stem
 
     # 4. Salva árvore serializada em JSON
