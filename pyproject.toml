@@ -1,0 +1,25 @@
+[project]
+name = "lumina-section-extractor"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "meirelesgc",email = "geu_costa@outlook.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<4.0.0"
+dependencies = [
+    "langchain (>=1.4.1,<2.0.0)",
+    "langchain-openai (>=1.6.2,<2.0.0)",
+    "langchain-pymupdf4llm (>=1.28.0,<2.0.0)"
+]
+
+[tool.poetry]
+packages = [{include = "lumina_section_extractor", from = "src"}]
+
+[project.scripts]
+extract-raw = "lumina_section_extractor.extract_raw_markdown:main"
+extract-titles = "lumina_section_extractor.extract_titles:main"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

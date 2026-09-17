@@ -1,0 +1,26 @@
+# Virtual Environment
+.venv/
+env/
+venv/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Pytest & tests
+.pytest_cache/
+.coverage
+
+# IDEs
+.vscode/
+.idea/
+
+# Data files (ignore input PDFs and generated files, but keep folder placeholders)
+data/00_input_pdfs/*.pdf
+data/01_raw_markdown/*.md
+data/02_extracted_titles/*.json
+data/02_extracted_titles/*.md
+data/02_extracted_titles/*.txt
+!data/**/README.md
+!data/**/.gitkeep
