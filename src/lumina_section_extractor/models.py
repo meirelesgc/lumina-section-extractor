@@ -11,6 +11,7 @@ class Heading:
     title: str
     raw: str
     page: Optional[int] = None
+    level_source: str = "font"  # "font" | "numbering_pattern"
 
 
 @dataclass

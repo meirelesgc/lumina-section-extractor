@@ -64,8 +64,11 @@ def section_to_documents(
     if not content:
         return []
 
-    section_title = section.breadcrumb[-1] if section.breadcrumb else section.heading.title
+    section_title = section.heading.title
     breadcrumb_str = " > ".join(section.breadcrumb)
+    confidence = (
+        "numbered" if section.heading.level_source == "numbering_pattern" else "font_derived"
+    )
 
     # Se a seção cabe no tamanho do chunk, não fatiamos
     if len(content) <= splitter._chunk_size:
@@ -77,12 +80,14 @@ def section_to_documents(
     total_sub_chunks = len(sub_texts)
 
     for idx, text in enumerate(sub_texts):
-        # Prefixo semântico leve com o título da seção para enriquecer o embedding
+        # Prefixo semântico leve com o título da seção imediata (sem breadcrumbs longos)
         prefixed_content = f"[{section_title}] {text}"
         metadata = {
-            "section_path": breadcrumb_str,
             "section_title": section_title,
+            "section_path": breadcrumb_str,
             "section_level": section.heading.level,
+            "level_source": section.heading.level_source,
+            "hierarchy_confidence": confidence,
             "chunk_index": idx,
             "total_chunks_in_section": total_sub_chunks,
             "page_number": section.heading.page,
@@ -92,6 +97,7 @@ def section_to_documents(
         docs.append(Document(page_content=prefixed_content, metadata=metadata))
 
     return docs
+
 
 
 def sections_to_documents(

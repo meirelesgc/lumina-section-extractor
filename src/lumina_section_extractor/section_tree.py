@@ -117,9 +117,12 @@ def flatten_sections(sections: list[Section]) -> list[Section]:
 
 def section_to_dict(section: Section) -> dict[str, Any]:
     """Converte uma seção e seus filhos recursivamente em dicionário serializável."""
+    confidence = "numbered" if section.heading.level_source == "numbering_pattern" else "font_derived"
     return {
         "title": section.heading.title,
         "level": section.heading.level,
+        "level_source": section.heading.level_source,
+        "hierarchy_confidence": confidence,
         "line_number": section.heading.line_number,
         "page": section.heading.page,
         "raw_heading": section.heading.raw,
@@ -130,6 +133,7 @@ def section_to_dict(section: Section) -> dict[str, Any]:
         "parent_title": section.parent_title,
         "children": [section_to_dict(child) for child in section.children],
     }
+
 
 
 def tree_to_dict(sections: list[Section]) -> list[dict[str, Any]]:

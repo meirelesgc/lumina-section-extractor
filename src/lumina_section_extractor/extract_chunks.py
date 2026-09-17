@@ -21,6 +21,7 @@ def dict_to_section_recursive(data: dict[str, Any]) -> Section:
         title=data.get("title", ""),
         raw=data.get("raw_heading", ""),
         page=data.get("page"),
+        level_source=data.get("level_source", "font"),
     )
     section = Section(
         heading=heading,
