@@ -16,11 +16,8 @@ __pycache__/
 .vscode/
 .idea/
 
-# Data files (ignore input PDFs and generated files, but keep folder placeholders)
-data/00_input_pdfs/*.pdf
-data/01_raw_markdown/*.md
-data/02_extracted_titles/*.json
-data/02_extracted_titles/*.md
-data/02_extracted_titles/*.txt
+# Data files (ignore everything inside data except directory placeholders)
+data/**/*
+!data/**/
 !data/**/README.md
 !data/**/.gitkeep
