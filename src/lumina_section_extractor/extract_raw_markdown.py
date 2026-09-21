@@ -3,16 +3,22 @@ import json
 import time
 from pathlib import Path
 from typing import Any
+import pymupdf
 import pymupdf4llm
 
 
 def extract_raw_with_pages(pdf_path: Path) -> tuple[str, list[dict[str, Any]]]:
     """Extrai markdown bruto e lista de chunks por página do PDF via pymupdf4llm."""
     page_chunks = pymupdf4llm.to_markdown(str(pdf_path), page_chunks=True)
+    with pymupdf.open(str(pdf_path)) as pdf:
+        page_sizes = [
+            {"width": p.rect.width, "height": p.rect.height, "rotation": p.rotation} for p in pdf
+        ]
 
     page_map: list[dict[str, Any]] = []
     text_parts: list[str] = []
     current_line = 1
+    current_char = 0
 
     for chunk in page_chunks:
         raw_text = chunk.get("text", "")
@@ -24,6 +30,12 @@ def extract_raw_with_pages(pdf_path: Path) -> tuple[str, list[dict[str, Any]]]:
         start_line = current_line
         end_line = current_line + max(0, num_lines - 1)
 
+        size = page_sizes[page_num - 1] if 0 < page_num <= len(page_sizes) else {}
+        boxes = [
+            {"class": b["class"], "bbox": list(b["bbox"]), "pos": list(b["pos"])}
+            for b in chunk.get("page_boxes", [])
+        ]
+
         page_map.append(
             {
                 "page": page_num,
@@ -31,12 +43,21 @@ def extract_raw_with_pages(pdf_path: Path) -> tuple[str, list[dict[str, Any]]]:
                 "end_line": end_line,
                 "char_count": len(raw_text),
                 "toc_items": chunk.get("toc_items", []),
+                # Posição física: 'pos' de cada box são offsets locais ao texto da página;
+                # 'char_start' é o offset da página no markdown consolidado.
+                "char_start": current_char,
+                "width": size.get("width"),
+                "height": size.get("height"),
+                "rotation": size.get("rotation", 0),
+                "boxes": boxes,
             }
         )
 
         text_parts.append(raw_text)
         # 2 quebras de linha adicionam 2 linhas vazias entre páginas
         current_line = end_line + 3
+        # "\n\n".join adiciona 2 caracteres entre páginas
+        current_char += len(raw_text) + 2
 
     full_markdown = "\n\n".join(text_parts)
     return full_markdown, page_map

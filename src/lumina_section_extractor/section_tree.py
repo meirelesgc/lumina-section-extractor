@@ -65,17 +65,47 @@ def slice_sections_content(headings: list[Heading], full_text: str) -> list[tupl
     return sliced
 
 
+def compute_line_starts(full_text: str) -> list[int]:
+    """Offset (em caracteres) de início de cada linha, consistente com str.splitlines()."""
+    starts: list[int] = []
+    offset = 0
+    for line in full_text.splitlines(keepends=True):
+        starts.append(offset)
+        offset += len(line)
+    starts.append(offset)  # sentinela: fim do texto
+    return starts
+
+
+def content_char_range(
+    full_text: str, line_starts: list[int], start_line: int, end_line: int
+) -> tuple[int, int]:
+    """Offsets [início, fim) do conteúdo (após strip) das linhas lines[start_line:end_line]."""
+    last = len(line_starts) - 1
+    region_start = line_starts[min(start_line, last)]
+    region_end = line_starts[min(max(end_line, start_line), last)]
+    region = full_text[region_start:region_end]
+    begin = region_start + (len(region) - len(region.lstrip()))
+    end = region_start + len(region.rstrip())
+    return begin, max(begin, end)
+
+
 def build_section_tree(headings: list[Heading], full_text: str) -> list[Section]:
     """Constrói a árvore hierárquica de Seções a partir dos headings e do texto."""
     if not headings:
         return []
 
     sliced = slice_sections_content(headings, full_text)
+    line_starts = compute_line_starts(full_text)
+    total_lines = len(line_starts) - 1
     root_sections: list[Section] = []
     # Pilha para rastrear pais: list[tuple[level, Section]]
     stack: list[tuple[int, Section]] = []
 
-    for heading, content in sliced:
+    for idx, (heading, content) in enumerate(sliced):
+        end_line = headings[idx + 1].line_number - 1 if idx + 1 < len(headings) else total_lines
+        char_start, char_end = content_char_range(
+            full_text, line_starts, heading.line_number, end_line
+        )
         # Desempilha nós de nível maior ou igual (irmãos ou nós de níveis mais profundos)
         while stack and stack[-1][0] >= heading.level:
             stack.pop()
@@ -88,6 +118,9 @@ def build_section_tree(headings: list[Heading], full_text: str) -> list[Section]
             breadcrumb=breadcrumb,
             content=content,
             parent_title=parent_section.heading.title if parent_section else None,
+            char_start=char_start,
+            char_end=char_end,
+            heading_char_start=line_starts[min(heading.line_number - 1, total_lines)],
         )
 
         if parent_section:
@@ -131,6 +164,9 @@ def section_to_dict(section: Section) -> dict[str, Any]:
         "raw_heading": section.heading.raw,
         "breadcrumb": section.breadcrumb,
         "breadcrumb_path": " > ".join(section.breadcrumb),
+        "char_start": section.char_start,
+        "char_end": section.char_end,
+        "heading_char_start": section.heading_char_start,
         "content_length": len(section.content),
         "content": section.content,
         "parent_title": section.parent_title,

@@ -1,3 +1,4 @@
+from lumina_section_extractor.annotate_pdf import annotate_pdf, enrich_chunks_with_rects
 from lumina_section_extractor.chunking import (
     clean_whitespace,
     run_chunk_pipeline,
@@ -18,6 +19,7 @@ from lumina_section_extractor.heading_cleaners import (
 )
 from lumina_section_extractor.models import Heading, Section, SectionRole
 from lumina_section_extractor.pipeline import run_full_pipeline
+from lumina_section_extractor.positioning import locate_range
 from lumina_section_extractor.role_classifier import (
     AliasRoleClassifier,
     PositionalAbstractFallbackClassifier,
@@ -56,4 +58,7 @@ __all__ = [
     "clean_whitespace",
     "run_chunk_pipeline",
     "run_full_pipeline",
+    "locate_range",
+    "annotate_pdf",
+    "enrich_chunks_with_rects",
 ]

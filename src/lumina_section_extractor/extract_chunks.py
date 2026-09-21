@@ -36,6 +36,9 @@ def dict_to_section_recursive(data: dict[str, Any]) -> Section:
         parent_title=data.get("parent_title"),
         role=role,
         role_confidence=data.get("role_confidence"),
+        char_start=data.get("char_start"),
+        char_end=data.get("char_end"),
+        heading_char_start=data.get("heading_char_start"),
     )
     for child_dict in data.get("children", []):
         section.children.append(dict_to_section_recursive(child_dict))

@@ -22,6 +22,7 @@ extract-raw = "lumina_section_extractor.extract_raw_markdown:main"
 extract-titles = "lumina_section_extractor.extract_titles:main"
 extract-sections = "lumina_section_extractor.extract_sections:main"
 extract-chunks = "lumina_section_extractor.extract_chunks:main"
+annotate-pdf = "lumina_section_extractor.annotate_pdf:main"
 run-pipeline = "lumina_section_extractor.pipeline:main"
 
 [build-system]

@@ -54,6 +54,22 @@ def create_default_text_splitter(
     )
 
 
+def locate_pieces(content: str, texts: list[str]) -> list[tuple[str, int]]:
+    """Associa cada pedaço do splitter ao seu offset em `content` (busca progressiva, com overlap)."""
+    pieces: list[tuple[str, int]] = []
+    cursor = 0
+    for text in texts:
+        idx = content.find(text, cursor)
+        if idx < 0:
+            idx = content.find(text)
+        if idx < 0:
+            idx = cursor
+        pieces.append((text, idx))
+        # o próximo pedaço nunca começa antes do início deste (overlap permitido)
+        cursor = idx + 1
+    return pieces
+
+
 def section_to_documents(
     section: Section,
     splitter: RecursiveCharacterTextSplitter,
@@ -70,16 +86,18 @@ def section_to_documents(
         "numbered" if section.heading.level_source == "numbering_pattern" else "font_derived"
     )
 
-    # Se a seção cabe no tamanho do chunk, não fatiamos
+    # Se a seção cabe no tamanho do chunk, não fatiamos. Guardamos o offset de cada
+    # pedaço dentro do conteúdo para poder localizá-lo depois no markdown/PDF.
     if len(content) <= splitter._chunk_size:
-        sub_texts = [content]
+        pieces = [(content, 0)]
     else:
-        sub_texts = splitter.split_text(content)
+        pieces = locate_pieces(content, splitter.split_text(content))
+    sub_texts = [text for text, _ in pieces]
 
     docs: list[Document] = []
     total_sub_chunks = len(sub_texts)
 
-    for idx, text in enumerate(sub_texts):
+    for idx, (text, start_index) in enumerate(pieces):
         # Prefixo semântico leve com o título da seção imediata (sem breadcrumbs longos)
         prefixed_content = f"[{section_title}] {text}"
         metadata = {
@@ -98,6 +116,10 @@ def section_to_documents(
             "source_file": source_name,
             "line_number": section.heading.line_number,
         }
+        if section.char_start is not None:
+            # Offsets absolutos no markdown consolidado (antes de prefixo/limpezas)
+            metadata["char_start"] = section.char_start + start_index
+            metadata["char_end"] = section.char_start + start_index + len(text)
         docs.append(Document(page_content=prefixed_content, metadata=metadata))
 
 
@@ -118,6 +140,10 @@ def sections_to_documents(
     for sec in sections:
         docs = section_to_documents(sec, splitter, source_name)
         all_docs.extend(docs)
+
+    # ID global único e estável dentro do documento (chunk_index é por seção)
+    for n, doc in enumerate(all_docs):
+        doc.metadata["chunk_id"] = f"chunk_{n}"
 
     return all_docs
 

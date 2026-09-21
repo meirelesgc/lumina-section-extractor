@@ -1,6 +1,7 @@
 import argparse
 import time
 from pathlib import Path
+from lumina_section_extractor.annotate_pdf import process_directory as run_stage_4
 from lumina_section_extractor.extract_chunks import process_directory as run_stage_3
 from lumina_section_extractor.extract_raw_markdown import process_directory as run_stage_1
 from lumina_section_extractor.extract_sections import process_directory as run_stage_2
@@ -11,6 +12,7 @@ def run_full_pipeline(
     base_data_dir: Path,
     chunk_size: int = 1000,
     chunk_overlap: int = 150,
+    annotate: bool = False,
 ) -> None:
     """Executa os 3 estágios do pipeline em sequência de forma integrada."""
     stage_1_dir = base_data_dir / "01_raw_markdown"
@@ -33,6 +35,11 @@ def run_full_pipeline(
     # Estágio 3
     print("\n▶️ [ESTÁGIO 3] Chunking Intra-seção e Enriquecimento Semântico")
     run_stage_3(stage_2_dir, stage_3_dir, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+
+    if annotate:
+        stage_4_dir = base_data_dir / "04_annotated_pdfs"
+        print("\n▶️ [ESTÁGIO 4] Localização no PDF (rects) e PDFs anotados")
+        run_stage_4(input_pdf_dir, stage_1_dir, stage_2_dir, stage_3_dir, stage_4_dir)
 
     total_elapsed = time.time() - total_start
     print("\n" + "=" * 70)
@@ -79,12 +86,19 @@ def main() -> None:
         help="Sobreposição de caracteres entre chunks (padrão: 150)",
     )
 
+    parser.add_argument(
+        "--annotate",
+        action="store_true",
+        help="Executa o Estágio 4: rects no JSON de chunks + PDFs anotados em 04_annotated_pdfs",
+    )
+
     args = parser.parse_args()
     run_full_pipeline(
         args.input_dir,
         args.data_dir,
         chunk_size=args.chunk_size,
         chunk_overlap=args.chunk_overlap,
+        annotate=args.annotate,
     )
 
 

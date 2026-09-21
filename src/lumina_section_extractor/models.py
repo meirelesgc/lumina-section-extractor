@@ -53,6 +53,9 @@ class Section:
         role: SectionRole = SectionRole.UNKNOWN,
         role_confidence: Optional[str] = None,
         title: Optional[str] = None,
+        char_start: Optional[int] = None,
+        char_end: Optional[int] = None,
+        heading_char_start: Optional[int] = None,
     ):
         if heading is None:
             heading = Heading(
@@ -71,6 +74,10 @@ class Section:
         self.children = children if children is not None else []
         self.role = role
         self.role_confidence = role_confidence
+        # Offsets absolutos no markdown consolidado: content == markdown[char_start:char_end]
+        self.char_start = char_start
+        self.char_end = char_end
+        self.heading_char_start = heading_char_start
 
     @property
     def title(self) -> str:

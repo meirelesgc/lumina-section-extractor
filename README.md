@@ -93,7 +93,9 @@ A separação física das etapas permite inspecionar cada fase do pipeline:
 - **`data/00_input_pdfs/`**: Onde você deposita seus PDFs brutos.
 - **`data/01_raw_markdown/`**: Markdowns puros (`.md`) e mapas de páginas com intervalos de linhas (`_pages.json`).
 - **`data/02_sections_tree/`**: Árvores hierárquicas de seções (`_sections.json`) e relatórios legíveis (`_sections.md`).
-- **`data/03_chunks/`**: Chunks semânticos enriquecidos prontos para vector stores (`_chunks.json` e `_chunks.md`).
+- **`data/03_chunks/`**: Chunks semânticos enriquecidos prontos para vector stores (`_chunks.json` e `_chunks.md`). Após o Estágio 4, o JSON também traz `rects`/`pages` por chunk e `page_sizes`.
+- **`data/04_annotated_pdfs/`**: PDFs com chunks (highlight por linha, `chunk_id` no popup) e seções (barra lateral por `section_role`).
+- **`data/02_extracted_titles/`**: saída do utilitário `poetry run extract-titles` (fora do pipeline principal).
 
 ---
 
@@ -130,8 +132,33 @@ poetry run run-pipeline
   ```
   *(Parâmetros opcionais: `--chunk-size 1000 --chunk-overlap 150`)*
 
+- **Estágio 4 — Posição no PDF e PDFs anotados:**
+  ```bash
+  poetry run annotate-pdf          # ou: poetry run run-pipeline --annotate
+  ```
+
 ### 5. Executando a Suíte de Testes Automatizados
-O projeto conta com 21 testes unitários cobrindo todos os cenários críticos e prevenindo regressões:
+O projeto conta com 28 testes unitários cobrindo todos os cenários críticos e prevenindo regressões:
 ```bash
 poetry run python -m unittest discover tests
 ```
+
+---
+
+## 📍 Marcação no PDF (Estágio 4) e Contrato para o Frontend
+
+**Como funciona:** o Estágio 1 guarda os `page_boxes` do pymupdf4llm (`bbox` + offsets `pos` no texto) em `_pages.json`; o Estágio 2 grava `char_start/char_end` de cada seção no markdown; o Estágio 3 grava `char_start/char_end` e um `chunk_id` global (`chunk_N`) em cada chunk. O Estágio 4 converte o intervalo do chunk nos blocos que ele toca e alinha os tokens do markdown às palavras de `page.get_text("words")` para obter **um retângulo por linha visual** (cai para o bbox do bloco se não alinhar).
+
+**Contrato por chunk** (`metadata` em `_chunks.json`):
+```json
+{"chunk_id": "chunk_12", "pages": [3, 4],
+ "rects": [{"page": 3, "x1": 56.7, "y1": 120.3, "x2": 530.1, "y2": 135.8}]}
+```
+Topo do arquivo: `page_sizes` = `{"3": {"width": 596.5, "height": 842.5, "rotation": 0}}`. Coordenadas em pontos PDF, origem no canto superior esquerdo, sem rotação aplicada; o frontend deve escalar por `page_sizes`.
+
+### Divergências em relação ao pipeline do projeto real (a resolver na migração)
+- **`chunk_id`**: real = `chunk_{página}_{índice}`; aqui = `chunk_{N}` global. `chunk_index` aqui é *por seção*, no real é da página/global.
+- **Chunk multipágina**: aqui um chunk (por seção) pode cruzar páginas, então `page` é por retângulo (`rects[].page`) e há `pages[]`; o real assume 1 página por chunk.
+- **Nomes**: `source_file`→`source`, `page_number`→`page` (página do *heading*, não do chunk; use `pages`).
+- **Texto**: `page_content` tem o prefixo `[Título]` e vem de markdown (`**`, `#`, tabelas); a posição usa `char_start/char_end`, nunca busca por string. Overlap (150) faz chunks vizinhos compartilharem retângulos.
+- **Precisão**: `page_boxes` têm bbox inteiro e classes com ruído; o refino por linha usa as palavras reais do PDF. Blocos `page-header`, `page-footer` e `picture` são ignorados.
